@@ -8,11 +8,11 @@ import SearchModel from "./components/SearchModel";
 
 const App = () => {
   return (
-    <div>
-      {/* <Navlinks />
+    <div className="flex lg:flex-row flex-col itmes-start w-[100%]">
+      <Navlinks />
       <Chatlist />
-      <Chatbox /> */}
-      <Login />
+      <Chatbox />
+      {/* <Login /> */}
       {/* <Regsiter /> */}
     </div>
   );
