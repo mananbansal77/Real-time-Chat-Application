@@ -1,13 +1,17 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FaUserPlus } from "react-icons/fa";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../Firebase/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
-const Regsiter = () => {
+const Register = ({ islogin, setislogin }) => {
   const [userdata, setuserdata] = useState({
     fullName: "",
     email: "",
     password: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+
   const handlechangeuserdata = (e) => {
     const { name, value } = e.target;
     setuserdata((prevstate) => ({
@@ -15,13 +19,34 @@ const Regsiter = () => {
       [name]: value,
     }));
   };
+
   const handleauth = async () => {
+    setIsLoading(true);
     try {
-      alert("Registeration success");
+      const usercredential = await createUserWithEmailAndPassword(
+        auth,
+        userdata?.email,
+        userdata?.password
+      );
+
+      const user = usercredential.user;
+      const userdocref = doc(db, "users", user.uid);
+
+      await setDoc(userdocref, {
+        uid: user.uid,
+        email: user.email,
+        username: user.email?.split("@")[0],
+        fullName: userdata.fullName,
+        image: "",
+      });
     } catch (error) {
       console.log(error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
+
   return (
     <section className="flex flex-col justify-center items-center h-[100vh] background-image">
       <div className="bg-white shadow-lg p-5 rounded-xl h-[25rem] w-[20rem] flex flex-col justify-center items-center">
@@ -31,45 +56,55 @@ const Regsiter = () => {
             Welcome, create an account to continue
           </p>
         </div>
+
         <div className="w-full">
           <input
-            name="fullname"
+            name="fullName"
             type="text"
             onChange={handlechangeuserdata}
             className="border border-green-200 w-full p-2 rounded-md bg-[#01aa851d] text-[#004939f3] mb-3 font-medium outline-none placeholder:text-[#00493958]"
             placeholder="Full Name"
-          ></input>
-
+          />
           <input
             name="email"
             type="email"
             onChange={handlechangeuserdata}
             className="border border-green-200 w-full p-2 rounded-md bg-[#01aa851d] text-[#004939f3] mb-3 font-medium outline-none placeholder:text-[#00493958]"
             placeholder="Email"
-          ></input>
-
+          />
           <input
             name="password"
             type="password"
             onChange={handlechangeuserdata}
             className="border border-green-200 w-full p-2 rounded-md bg-[#01aa851d] text-[#004939f3] mb-3 font-medium outline-none placeholder:text-[#00493958]"
             placeholder="Password"
-          ></input>
+          />
         </div>
+
         <div className="w-full">
           <button
             onClick={handleauth}
+            disabled={isLoading}
             className="bg-[#01aa85] text-white font-bold w-full p-2 rounded-md flex items-center gap-2 justify-center"
           >
-            Register <FaUserPlus />
+            {isLoading ? (
+              "Processing..."
+            ) : (
+              <>
+                Register <FaUserPlus />
+              </>
+            )}
           </button>
         </div>
+
         <div className="mt-5 text-center text-gray-400 text-sm">
-          <button>Already have an Account? Sign In</button>
+          <button onClick={() => setislogin(!islogin)}>
+            Already have an Account? Sign In
+          </button>
         </div>
       </div>
     </section>
   );
 };
 
-export default Regsiter;
+export default Register;
