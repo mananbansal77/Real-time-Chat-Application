@@ -12,6 +12,7 @@ import { useEffect } from "react";
 const App = () => {
   const [islogin, setislogin] = useState(false);
   const [user, setuser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   useEffect(() => {
     const currentuser = auth.currentUser;
     if (currentuser) {
@@ -27,8 +28,8 @@ const App = () => {
       {user ? (
         <div className="flex lg:flex-row flex-col itmes-start w-[100%]">
           <Navlinks />
-          <Chatlist />
-          <Chatbox />
+          <Chatlist setSelectedUser={setSelectedUser} />
+          <Chatbox selectedUser={selectedUser} />
         </div>
       ) : (
         <div>
