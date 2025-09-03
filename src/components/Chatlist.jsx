@@ -1,110 +1,115 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import defaultAvatar from "../../public/assets/default.jpg";
 import { RiMore2Fill } from "react-icons/ri";
-import SearchModel from "./SearchModel";
+import SearchModal from "./SearchModel";
+import { formatTimestamp } from "../utils/FormatTimestamp";
 import chatData from "../data/chats";
-
-// helper: format timestamp
-const formatDate = (seconds) => {
-  if (!seconds) return "N/A";
-  const date = new Date(seconds * 1000);
-  return date.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const Chatlist = () => {
+import { auth, db, listenForChats } from "../Firebase/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+const Chatlist = ({ setSelectedUser }) => {
   const [chats, setChats] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    setChats(chatData);
+    const userDocRef = doc(db, "users", auth?.currentUser?.uid);
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      setUser(doc.data());
+    });
+    return unsubscribe;
   }, []);
 
-  // 🔹 Sort chats by lastMessageTimestamp (latest first)
+  console.log(user?.fullName);
+
+  useEffect(() => {
+    const unsubscribe = listenForChats(setChats);
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const sortedChats = useMemo(() => {
     return [...chats].sort((a, b) => {
-      const aTime =
-        (a.lastMessageTimestamp?.seconds || 0) +
-        (a.lastMessageTimestamp?.nanoseconds || 0) / 1e9;
-      const bTime =
-        (b.lastMessageTimestamp?.seconds || 0) +
-        (b.lastMessageTimestamp?.nanoseconds || 0) / 1e9;
-      return bTime - aTime; // descending
+      const aTimestamp =
+        a?.lastMessageTimestamp?.seconds +
+        a?.lastMessageTimestamp?.nanoseconds / 1e9;
+      const bTimestamp =
+        b?.lastMessageTimestamp?.seconds +
+        b?.lastMessageTimestamp?.nanoseconds / 1e9;
+
+      return bTimestamp - aTimestamp;
     });
   }, [chats]);
 
+  const startChat = (user) => {
+    setSelectedUser(user);
+  };
+
   return (
-    <section className="relative hidden lg:flex flex-col item-start justify-start bg-white h-[100vh] w-[100%] md:w-[600px] ">
-      {/* Profile Header */}
-      <header className="flex items-center justify-between w-[100%] lg:border-b border-b-1 p-4 sticky md:static top-0 z-[100]">
-        <main className="flex items-center gap-3 ">
+    <section className="relative hidden lg:flex flex-col item-start justify-start bg-white h-[100vh] w-[100%] md:w-[600px]  ">
+      <header className="flex items-center justify-between w-[100%] lg:border-b border-b-1 border-[#898989b9] p-4 sticky md:static top-0 z-[100] border-r border-[#9090902c]">
+        <main className="flex items-center gap-3">
           <img
-            src="https://i.pravatar.cc/150?img=13"
+            src={user?.image || defaultAvatar}
             className="w-[44px] h-[44px] object-cover rounded-full"
-            alt="current-user"
+            alt=""
           />
           <span>
-            <h3 className="p-0 font-semibold text-[#2a3d39] md:text-[17px]">
-              Chatfrik User
+            <h3 className="p-0 font-semibold text-[#2A3D39] md:text-[17px]">
+              {user?.fullName || "ChatFrik user"}
             </h3>
-            <p className="p-0 font-light text-[#2a3d39] text-[15px]">
-              @chatfrik
+            <p className="p-0 font-light text-[#2A3D39] text-[15px]">
+              @{user?.username || "chatfrik"}
             </p>
           </span>
         </main>
-        <button className="bg-[#d9f2ed] w-[30px] p-2 flex items-center justify-center rounded-lg cursor-pointer">
-          <RiMore2Fill color="#01aa85" className="w-[30px] h-[30px]" />
+        <button className="bg-[#D9F2ED] w-[35px] h-[35px] p-2 flex items-center justify-center rounded-lg">
+          <RiMore2Fill color="#01AA85" className="w-[28px] h-[28px]" />
         </button>
       </header>
 
-      {/* Search + Count */}
-      <div className="w-[100%] mt-[10px] px-5 pb-0">
-        <header className="flex item-center justify-between">
-          <h3 className="text-[16px]">Messages ({sortedChats?.length || 0})</h3>
-          <SearchModel />
+      <div className="w-[100%] mt-[10px] px-5">
+        <header className="flex items-center justify-between">
+          <h3 className="text-[16px]">Messages ({chats?.length || 0})</h3>
+          <SearchModal startChat={startChat} />
         </header>
       </div>
 
-      {/* Chat list */}
-      <main className="flex flex-col items-start mt-[1.0rem] py-3 pt-0">
-        {sortedChats?.map((chat) => {
-          // get other user (not baxo)
-          const otherUser = chat?.users?.find(
-            (user) => user?.email !== "baxo@mailinator.com"
-          );
-
-          return (
-            <button
-              key={chat?.id}
-              className="flex items-start justify-between w-[100%] border-b border-[#38080822] px-5 pb-3 pt-3 hover:bg-[#f9f9f9] transition"
-            >
-              {/* Left side: avatar + message */}
-              <div className="flex items-start gap-3">
-                <img
-                  src={otherUser?.image || "https://via.placeholder.com/40"}
-                  className="h-[40px] w-[40px] rounded-full object-cover"
-                  alt={otherUser?.fullName}
-                />
-                <span>
-                  <h2 className="p-0 font-semibold text-[#2a3d39] text-left text-[16px]">
-                    {otherUser?.fullName || "Unknown User"}
-                  </h2>
-                  <p className="p-0 font-light text-[#2a3d39] text-left text-[14px] truncate max-w-[250px]">
-                    {chat?.lastMessage || "No messages yet"}
+      <main className="flex flex-col items-start mt-[1.5rem] pb-3 custom-scrollbar w-[100%] h-[100%]">
+        {sortedChats?.map((chat) => (
+          <button
+            key={chat?.id}
+            className="flex items-start justify-between w-[100%] border-b border-[#9090902c] px-5 pb-3 pt-3"
+          >
+            {chat?.users
+              ?.filter((user) => user?.email !== auth?.currentUser?.email)
+              ?.map((user) => (
+                <>
+                  <div
+                    className="flex items-start gap-3"
+                    onClick={() => startChat(user)}
+                  >
+                    <img
+                      src={user?.image || defaultAvatar}
+                      className="h-[40px] w-[40px] rounded-full object-cover"
+                      alt=""
+                    />
+                    <span>
+                      <h2 className="p-0 font-semibold text-[#2A3d39] text-left text-[17px]">
+                        {user?.fullName || "ChatFrik User"}
+                      </h2>
+                      <p className="p-0 font-light text-[#2A3d39] text-left text-[14px]">
+                        {chat?.lastMessage}
+                      </p>
+                    </span>
+                  </div>
+                  <p className="p-0 font-regular text-gray-400 text-left text-[11px]">
+                    {formatTimestamp(chat?.lastMessageTimestamp)}
                   </p>
-                </span>
-              </div>
-
-              {/* Right side: time */}
-              <p className="p-0 font-regular text-gray-400 text-left text-[11px] whitespace-nowrap">
-                {formatDate(chat?.lastMessageTimestamp?.seconds)}
-              </p>
-            </button>
-          );
-        })}
+                </>
+              ))}
+          </button>
+        ))}
       </main>
     </section>
   );
