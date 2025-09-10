@@ -1,18 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import defaultAvatar from "../../public/assets/default.jpg";
 import { formatTimestamp } from "../utils/formatTimestamp";
-import { RiSendPlaneFill } from "react-icons/ri";
-import { auth, db, listenForMessages, sendMessage } from "../firebase/firebase"; // 👈 1. Import db
-import { doc, updateDoc } from "firebase/firestore"; // 👈 2. Import firestore functions
+import { RiSendPlaneFill, RiArrowLeftSLine } from "react-icons/ri"; // 👈 Import back arrow icon
+import { auth, db, listenForMessages, sendMessage } from "../firebase/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 import logo from "../../public/assets/logo.png";
 
-const Chatbox = ({ selectedUser }) => {
+// 👇 Update component to accept setSelectedUser
+const Chatbox = ({ selectedUser, setSelectedUser }) => {
+  // ... (your existing state and logic)
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const senderEmail = auth?.currentUser?.email;
   const messagesEndRef = useRef(null);
 
-  // Effect for listening to messages AND resetting unread count
   useEffect(() => {
     if (selectedUser?.uid) {
       const chatId =
@@ -20,19 +21,16 @@ const Chatbox = ({ selectedUser }) => {
           ? `${auth.currentUser.uid}-${selectedUser.uid}`
           : `${selectedUser.uid}-${auth.currentUser.uid}`;
 
-      // 👇 3. This new code resets the unread count to 0
       const chatRef = doc(db, "chats", chatId);
       updateDoc(chatRef, {
         [`unreadCount.${auth.currentUser.uid}`]: 0,
       });
 
-      // Start listening for new messages
       const unsubscribe = listenForMessages(chatId, setMessages);
       return () => unsubscribe();
     }
   }, [selectedUser]);
 
-  // Effect for smooth-scrolling
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -56,12 +54,11 @@ const Chatbox = ({ selectedUser }) => {
         ? `${auth.currentUser.uid}-${selectedUser.uid}`
         : `${selectedUser.uid}-${auth.currentUser.uid}`;
 
-    // The sendMessage function now correctly passes sender and receiver IDs
     await sendMessage(
       messageText,
       chatId,
-      auth.currentUser.uid, // senderId
-      selectedUser.uid // receiverId
+      auth.currentUser.uid,
+      selectedUser.uid
     );
     setMessageText("");
   };
@@ -69,9 +66,18 @@ const Chatbox = ({ selectedUser }) => {
   return (
     <>
       {selectedUser ? (
-        <section className="flex flex-col items-start justify-start h-screen w-[100%] background-image">
-          <header className="w-[100%] h-[82px] m:h-fit p-4 bg-white">
+        <section className="flex flex-col items-start justify-start h-screen w-full background-image">
+          {/* 👇 Added gap-2 for spacing and items-center */}
+          <header className="w-full h-[82px] p-4 bg-white flex items-center gap-2">
+            {/* 👇 The Back Button, hidden on large screens */}
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="lg:hidden p-1"
+            >
+              <RiArrowLeftSLine size={28} className="text-gray-600" />
+            </button>
             <main className="flex items-center gap-3">
+              {/* ... header content ... */}
               <span>
                 <img
                   src={selectedUser?.image || defaultAvatar}
@@ -90,9 +96,11 @@ const Chatbox = ({ selectedUser }) => {
             </main>
           </header>
 
-          <main className="custom-scrollbar relative h-[100vh] w-[100%] flex flex-col justify-between">
-            <section className="px-3 pt-5 b-20 lg:pb-10">
-              <div className="overflow-auto h-[80vh]">
+          {/* 👇 Added padding-bottom (pb-20) to make space for the nav bar */}
+          <main className="custom-scrollbar relative h-full w-full flex flex-col justify-between pb-20 lg:pb-0">
+            {/* ... rest of your component */}
+            <section className="px-3 pt-5 h-full">
+              <div className="overflow-y-auto h-full">
                 {sortedMessages?.map((msg, index) => (
                   <div
                     key={index}
@@ -136,15 +144,15 @@ const Chatbox = ({ selectedUser }) => {
                 <div ref={messagesEndRef} />
               </div>
             </section>
-            <div className="sticky lg:bottom-0 bottom-[60px] p-3 h-fit w-[100%]">
+            <div className="p-3 h-fit w-full">
               <form
                 onSubmit={handleSendMessage}
-                className="flex items-center bg-white h-[45px] w-[100%] px-2 rounded-lg relative shadow-lg"
+                className="flex items-center bg-white h-[45px] w-full px-2 rounded-lg relative shadow-lg"
               >
                 <input
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  className="h-full text-[#2A3D39] outline-none text-[16px] pl-3 pr-[50px] rounded-lg w-[100%]"
+                  className="h-full text-[#2A3D39] outline-none text-[16px] pl-3 pr-[50px] rounded-lg w-full"
                   type="text"
                   placeholder="Write your message..."
                 />
@@ -159,7 +167,8 @@ const Chatbox = ({ selectedUser }) => {
           </main>
         </section>
       ) : (
-        <section className="h-screen w-[100%] bg-[#e5f6f3]">
+        <section className="hidden lg:flex h-screen w-full bg-[#e5f6f3]">
+          {/* ... welcome screen ... */}
           <div className="flex flex-col justify-center items-center h-[100vh]">
             <img src={logo} alt="" width={100} />
             <h1 className="text-[30px] font-bold text-teal-700 mt-5">

@@ -7,34 +7,62 @@ import Chatlist from "./components/Chatlist";
 import { auth } from "./firebase/firebase";
 
 const App = () => {
-    const [isLogin, setIsLogin] = useState(true);
-    const [user, setUser] = useState(null);
-    const [selectedUser, setSelectedUser] = useState(null);
-    useEffect(() => {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-            setUser(currentUser);
-        }
+  const [isLogin, setIsLogin] = useState(true);
+  const [user, setUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
 
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            setUser(user);
-        });
+  useEffect(() => {
+    // This sets up a listener for authentication state changes
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+    });
 
-        return () => unsubscribe();
-    }, []);
+    // Cleanup the listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  // If no user is logged in, show the Login/Register forms
+  if (!user) {
     return (
-        <div>
-            {user ? (
-                <div className="flex lg:flex-row flex-col items-start w-[100%]">
-                    <Navlinks />
-                    <Chatlist setSelectedUser={setSelectedUser} />
-                    <Chatbox selectedUser={selectedUser} />
-                </div>
-            ) : (
-                <div>{isLogin ? <Login isLogin={isLogin} setIsLogin={setIsLogin} /> : <Register isLogin={isLogin} setIsLogin={setIsLogin} />}</div>
-            )}
-        </div>
+      <div>
+        {isLogin ? (
+          <Login isLogin={isLogin} setIsLogin={setIsLogin} />
+        ) : (
+          <Register isLogin={isLogin} setIsLogin={setIsLogin} />
+        )}
+      </div>
     );
+  }
+
+  // If a user is logged in, show the main chat application
+  return (
+    <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden">
+      <Navlinks />
+
+      {/* Desktop Layout: Always show both list and chatbox */}
+      <div className="hidden lg:flex w-full">
+        <Chatlist setSelectedUser={setSelectedUser} />
+        <Chatbox
+          selectedUser={selectedUser}
+          setSelectedUser={setSelectedUser}
+        />
+      </div>
+
+      {/* Mobile Layout: Show one view at a time based on selectedUser state */}
+      <div className="flex lg:hidden w-full h-full">
+        {selectedUser ? (
+          // If a user is selected, show the chatbox
+          <Chatbox
+            selectedUser={selectedUser}
+            setSelectedUser={setSelectedUser}
+          />
+        ) : (
+          // Otherwise, show the list of chats
+          <Chatlist setSelectedUser={setSelectedUser} />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default App;
